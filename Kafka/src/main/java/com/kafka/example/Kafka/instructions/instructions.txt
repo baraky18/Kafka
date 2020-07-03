@@ -1,0 +1,59 @@
+Guide:
+first we have to setup kafka with topics, partitions etc. for that we need to go to: https://kafka.apache.org/quickstart
+
+Setup:
+go to C:\kafka_2.12-2.5.0\bin in unix and run the following command:
+./zookeeper-server-start.sh ../config/zookeeper.properties
+
+open another instance of unix in the same location and run this command:
+./kafka-server-start.sh ../config/server.properties
+
+Definitions:
+Example: we need to update in real time the scores of several football games into different clients. the clients could be mobile devices
+and computer browsers.
+
+Producer - process that produces message with data and inserts it to the queue. to initiate the message sending all the producer needs
+	to do is to specify the name of the topic and 1 broker to connect to. kafka will automatically take care of routing the data to the
+	right brokers. producers can choose to receive acknowledgment of the message they produce:
+	Acks=0: producer won't wait for acknowledgment (possible data loss)
+	Acks=l: producer will wait for the leader acknowledgment (limited data loss)
+	Acks=all: leader + replicas acknowledgment (no data loss)
+	producers can also choose to send key along with the message they produce. this will guarantee that all of the messages for that key
+	will always go to the same partition - this will enable ordering for specific key.
+	for example: producer will send customer information along with key of customer id. so all of the messages related to that same customer id
+	will be queued in the same partition.
+Consumer - process that consumes the data from the queue. for example: mobile devices and browsers. to initiate the message reading 
+	all the producer needs to do is to specify the name of the topic and 1 broker to connect to. kafka will automatically take care 
+	of routing the data to the right brokers. consumer can read in parallel from several partitions and from each partition read in order.
+Consumer group - several consumers that usually updates the same apps. example: mobile group and pc group.
+    these groups will read the same records but will update different channels. each consumer within a group reads from different partition.
+    for example: consumer group 0 contains 2 consumers: consumer_0_0, consumer_0_1. consumer group 1 contains 1 consumer: consumer_1_0.
+    topic 0 has 3 partitions: partition_0, partition_1, partition_2.
+    consumer_0_0 reads from partition_0 and partition_1 and consumer_0_1 reads from partition_2.
+    consumer_1_0 reads from partition_0, partition_1 and partition_2.
+
+as time passes, we are updating the scores of more games and our servers are struggling to keep up.
+we decide to randomly divide the 1 queue that we have into several queues. now, the problem is that items from different games will
+be in the same queue. so we can use the match name as a indicator that distributes items to queues.
+
+Partition - a queue that holds items of a specific entity. example: specific game.
+Partition count - the total number of partitions
+Partition key - a unique field that the items should be stored by. example: the match name.
+Broker - a server that holds one or more partitions. the partitions can be of different topics. for example: Broker A can hold
+    partition_0 of Topic A and partition_1 of topic B.
+Record - an item in a partition. example: an update of score in a match between USA and Brazil at minute 47.
+Partition number - number of partition in a topic
+Topic - a grouping of partitions handling the same type of data
+Offset - a sequential number that Kafka provides to each record
+
+Replication factor - Partitions will be duplicated in such manner that the data will not be lost. for example:
+    Broker_0 will contain partition_0,
+    Broker_1 will contain partition_0_backup1,
+    Broker_2 will contain partition_0_backup2,
+    Broker_3 will contain partition_1_backup1,
+    Broker_4 will contain partition_1,
+    Broker_0 will be the leader of partition_0,
+    Broker_3 will be the leader of partition_1
+
+it's up to the consumer implementation to decide in which order to consume records.
+each consumer in a consumer group will hold several offset pointers to keep track which record should be read next. 
